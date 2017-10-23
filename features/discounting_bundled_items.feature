@@ -12,7 +12,7 @@ Feature: Adding bundled product to cart
         And the store has a product "Symfony Con 2017 Bundled Ticket" priced at "€751"
         And the product "Symfony Con 2017 Bundled Ticket" has an association "Product Bundle" with products "Symfony Con 2017 Conference Ticket" and "Symfony Con 2017 Workshop Ticket"
 
-    @todo
+    @ui
     Scenario: Adding a discount for the bundled products
         When I add product "Symfony Con 2017 Bundled Ticket" to the cart
         Then I should see "Symfony Con 2017 Conference Ticket" with quantity 1 in my cart

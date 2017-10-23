@@ -4,5 +4,6 @@ services:
         arguments:
             - "@sylius.factory.order_item"
             - "@sylius.order_item_quantity_modifier"
+            - "@sylius.factory.adjustment"
         tags:
             - { name: sylius.order_processor, priority: 55 }
