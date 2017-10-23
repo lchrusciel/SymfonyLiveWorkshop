@@ -1,1 +1,8 @@
-services: ~
+services:
+    app.processor.bundled_product_order_processor:
+        class: AppBundle\Processor\BundledProductOrderProcessor
+        arguments:
+            - "@sylius.factory.order_item"
+            - "@sylius.order_item_quantity_modifier"
+        tags:
+            - { name: sylius.order_processor, priority: 55 }

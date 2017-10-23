@@ -10,7 +10,7 @@ Feature: Adding bundled product to cart
         And the store has "Symfony Live Conference Ticket", "Symfony Live Workshop Ticket" and "Symfony Live Bundled Ticket" products
         And the product "Symfony Live Bundled Ticket" has an association "Product Bundle" with products "Symfony Live Conference Ticket" and "Symfony Live Workshop Ticket"
 
-    @todo
+    @ui
     Scenario: Adding a bundled product to the cart
         When I add product "Symfony Live Bundled Ticket" to the cart
         Then I should be on my cart summary page
