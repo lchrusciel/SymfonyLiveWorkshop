@@ -4,6 +4,18 @@ services:
         arguments:
             - "@sylius.factory.order_item"
             - "@sylius.order_item_quantity_modifier"
-            - "@sylius.factory.adjustment"
+            - "@app.finder.bundle_association_finder"
         tags:
             - { name: sylius.order_processor, priority: 55 }
+
+    app.processor.bundled_product_price_recalculation_order_processor:
+        class: AppBundle\Processor\BundledProductPriceRecalculationOrderProcessor
+        arguments:
+            - "@sylius.repository.product"
+            - "@app.finder.bundle_association_finder"
+            - "@sylius.factory.adjustment"
+        tags:
+            - { name: sylius.order_processor, priority: 35 }
+
+    app.finder.bundle_association_finder:
+        class: AppBundle\Finder\BundleAssociationFinder

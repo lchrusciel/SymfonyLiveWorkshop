@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace AppBundle\Processor;
 
+use AppBundle\Entity\OrderItem;
+use AppBundle\Finder\BundleAssociationFinderInterface;
 use Sylius\Component\Core\Factory\CartItemFactoryInterface;
-use Sylius\Component\Core\Model\AdjustmentInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\OrderItemInterface;
-use Sylius\Component\Order\Factory\AdjustmentFactoryInterface;
 use Sylius\Component\Order\Model\OrderInterface as BaseOrderInterface;
 use Sylius\Component\Order\Modifier\OrderItemQuantityModifierInterface;
 use Sylius\Component\Order\Processor\OrderProcessorInterface;
@@ -17,25 +17,23 @@ use Webmozart\Assert\Assert;
 
 final class BundledProductOrderProcessor implements OrderProcessorInterface
 {
-    private const BUNDLED_PRODUCTS_CODE = 'bundled_products';
-
     /** @var CartItemFactoryInterface */
     private $cartItemFactory;
 
     /** @var OrderItemQuantityModifierInterface */
     private $orderItemQuantityModifier;
 
-    /** @var AdjustmentFactoryInterface */
-    private $adjustmentFactory;
+    /** @var BundleAssociationFinderInterface */
+    private $bundleAssociationFinder;
 
     public function __construct(
         CartItemFactoryInterface $cartItemFactory,
         OrderItemQuantityModifierInterface $orderItemQuantityModifier,
-        AdjustmentFactoryInterface $adjustmentFactory
+        BundleAssociationFinderInterface $bundleAssociationFinder
     ) {
         $this->cartItemFactory = $cartItemFactory;
         $this->orderItemQuantityModifier = $orderItemQuantityModifier;
-        $this->adjustmentFactory = $adjustmentFactory;
+        $this->bundleAssociationFinder = $bundleAssociationFinder;
     }
 
     public function process(BaseOrderInterface $order): void
@@ -59,49 +57,28 @@ final class BundledProductOrderProcessor implements OrderProcessorInterface
 
         Assert::notNull($product);
 
-        $associations = $product->getAssociations();
+        $association = $this->bundleAssociationFinder->find($product->getAssociations());
 
-        foreach ($associations as $association) {
-            $associationType = $association->getType();
-
-            Assert::notNull($associationType);
-
-            if (self::BUNDLED_PRODUCTS_CODE !== $associationType->getCode()) {
-                continue;
-            }
-
-            $this->convertBundledItemIntoItems($order, $item, $association);
+        if (null === $association) {
+            return;
         }
+
+        $this->convertBundledItemIntoItems($order, $item, $association);
     }
 
     private function convertBundledItemIntoItems(OrderInterface $order, OrderItemInterface $item, ProductAssociationInterface $association): void
     {
-        $itemPrices = [];
+        $product = $item->getProduct();
         foreach ($association->getAssociatedProducts() as $associatedProduct) {
+            /** @var OrderItem $bundledItem */
             $bundledItem = $this->cartItemFactory->createForProduct($associatedProduct);
+            $bundledItem->setBundleOrigin($product->getCode());
 
             $this->orderItemQuantityModifier->modify($bundledItem, $item->getQuantity());
 
-            $itemPrices[] = $this->getChannelPricing($order, $bundledItem);
             $order->addItem($bundledItem);
         }
 
-        /** @var AdjustmentInterface $adjustment */
-        $adjustment = $this->adjustmentFactory->createWithData(
-            AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT,
-            'Bundle adjustment',
-            $this->getChannelPricing($order, $item) - array_sum($itemPrices)
-        );
-
-
-        $order->addAdjustment($adjustment);
-        $adjustment->lock();
-
         $order->removeItem($item);
-    }
-
-    private function getChannelPricing(OrderInterface $order, OrderItemInterface $item): int
-    {
-        return $item->getVariant()->getChannelPricingForChannel($order->getChannel())->getPrice();
     }
 }
