@@ -1,0 +1,8 @@
+AppBundle\Entity\OrderItem:
+    type: entity
+    table: app_order_item
+    fields:
+        bundleOrigin:
+            type: string
+            length: 255
+            nullable: true
