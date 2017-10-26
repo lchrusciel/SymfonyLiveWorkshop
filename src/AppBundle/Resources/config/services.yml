@@ -14,6 +14,7 @@ services:
             - "@sylius.repository.product"
             - "@app.finder.bundle_association_finder"
             - "@sylius.factory.adjustment"
+            - "@sylius.proportional_integer_distributor"
         tags:
             - { name: sylius.order_processor, priority: 35 }
 

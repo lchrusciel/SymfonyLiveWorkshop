@@ -1,0 +1,28 @@
+{% import "@SyliusShop/Common/Macro/money.html.twig" as money %}
+
+{% set orderPromotionAdjustment = constant('Sylius\\Component\\Core\\Model\\AdjustmentInterface::ORDER_ITEM_PROMOTION_ADJUSTMENT') %}
+{% set orderPromotions = sylius_aggregate_adjustments(item.getAdjustmentsRecursively(orderPromotionAdjustment)) %}
+
+<tr>
+    <td>
+        {% include '@SyliusShop/Product/_info.html.twig' with {'variant': item.variant} %}
+    </td>
+    <td>
+        <span class="sylius-unit-price">{{ money.format(item.unitPrice, order.currencyCode) }}</span>
+        {% for label, amount in orderPromotions %}
+            <div class="item">
+                <div class="content">
+                    <div class="header">{{ label }}</div>
+                    <div class="description">
+                        {{ money.convertAndFormat(amount) }}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </td>
+    <td class="center aligned">{{ item.quantity }}</td>
+    <td class="right aligned">
+        {{ money.format(item.subtotal, order.currencyCode) }}
+    </td>
+</tr>

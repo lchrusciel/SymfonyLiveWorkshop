@@ -7,11 +7,11 @@ namespace AppBundle\Processor;
 use AppBundle\Entity\OrderItem;
 use AppBundle\Finder\BundleAssociationFinderInterface;
 use Sylius\Component\Core\Distributor\ProportionalIntegerDistributorInterface;
+use Sylius\Component\Core\Model\AdjustmentInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\ProductInterface;
 use Sylius\Component\Core\Repository\ProductRepositoryInterface;
 use Sylius\Component\Order\Factory\AdjustmentFactoryInterface;
-use Sylius\Component\Order\Model\AdjustmentInterface;
 use Sylius\Component\Order\Model\OrderInterface as BaseOrderInterface;
 use Sylius\Component\Order\Processor\OrderProcessorInterface;
 use Sylius\Component\Product\Model\ProductAssociationInterface;
@@ -28,14 +28,19 @@ final class BundledProductPriceRecalculationOrderProcessor implements OrderProce
     /** @var AdjustmentFactoryInterface */
     private $adjustmentFactory;
 
+    /** @var ProportionalIntegerDistributorInterface */
+    private $proportionalIntegerDistributor;
+
     public function __construct(
         ProductRepositoryInterface $productRepository,
         BundleAssociationFinderInterface $bundleAssociationFinder,
-        AdjustmentFactoryInterface $adjustmentFactory
+        AdjustmentFactoryInterface $adjustmentFactory,
+        ProportionalIntegerDistributorInterface $proportionalIntegerDistributor
     ) {
         $this->productRepository = $productRepository;
         $this->bundleAssociationFinder = $bundleAssociationFinder;
         $this->adjustmentFactory = $adjustmentFactory;
+        $this->proportionalIntegerDistributor = $proportionalIntegerDistributor;
     }
 
     public function process(BaseOrderInterface $order): void
@@ -63,24 +68,34 @@ final class BundledProductPriceRecalculationOrderProcessor implements OrderProce
             if ($this->hasAllBundledProducts($this->bundleAssociationFinder->find($productBundle->getAssociations()), $bundledItems)) {
                 $expectedPrice = $this->getChannelPricing($order, $productBundle);
 
-                $order->addAdjustment($this->processBundledProducts($expectedPrice, $bundledItems));
+                $this->processBundledProducts($expectedPrice, $bundledItems);
             }
         }
     }
 
-    private function processBundledProducts(int $expectedPrice, array $bundle): AdjustmentInterface
+    private function processBundledProducts(int $expectedPrice, array $bundle): void
     {
         $itemPrices = array_map(function (OrderItem $item) {
             return $item->getUnitPrice();
         }, $bundle);
 
-        return $this->adjustmentFactory->createWithData(
-            \Sylius\Component\Core\Model\AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT,
-            'Bundle adjustment',
-            $expectedPrice - array_sum($itemPrices)
-        );
-    }
+        $distributedDiscount = $this->proportionalIntegerDistributor->distribute($itemPrices, $expectedPrice - array_sum($itemPrices));
 
+        /** @var OrderItem $item */
+        foreach ($bundle as $item) {
+            $difference = array_shift($distributedDiscount);
+
+            $adjusment = $this->adjustmentFactory->createWithData(
+                AdjustmentInterface::ORDER_ITEM_PROMOTION_ADJUSTMENT,
+                'Bundle adjustment',
+                $difference,
+                true
+            );
+
+            $item->setUnitPrice($item->getUnitPrice() + $difference);
+            $item->addAdjustment($adjusment);
+        }
+    }
 
     private function collectBundledItems(OrderInterface $order, string $bundleOriginCode): array
     {
