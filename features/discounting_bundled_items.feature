@@ -18,3 +18,12 @@ Feature: Adding bundled product to cart
         Then I should see "Symfony Con 2017 Conference Ticket" with quantity 1 in my cart
         And I should see "Symfony Con 2017 Workshop Ticket" with quantity 1 in my cart
         And my cart total should be "€751.00"
+
+    #not working
+    @todo
+    Scenario: Removing the discount when bundle is one of bundled items is not in the cart anymore
+        When I add product "Symfony Con 2017 Bundled Ticket" to the cart
+        And I remove product "Symfony Con 2017 Workshop Ticket" from the cart
+        Then there should be one item in my cart
+        And I should see "Symfony Con 2017 Conference Ticket" with quantity 1 in my cart
+        And my cart total should be "€249.00"
