@@ -20,3 +20,8 @@ services:
 
     app.finder.bundle_association_finder:
         class: AppBundle\Finder\BundleAssociationFinder
+
+    app.promotion_rule_checker.bundle:
+        class: AppBundle\Promotion\Rule\BundleRuleChecker
+        tags:
+            - { name: sylius.promotion_rule_checker, type: !php/const:AppBundle\Promotion\Rule\BundleRuleChecker::TYPE, label: 'Bundle', form_type: AppBundle\Form\Type\BundlePromotionRuleConfigurationType }
